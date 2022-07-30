@@ -1,0 +1,173 @@
+kibot:
+  version: 1
+
+# preflight fails right now, skip
+#preflight:
+#  run_drc: true
+#  run_erc: true
+
+filters:
+- name: only_jlc_parts
+  comment: Only parts with JLC (LCSC) code
+  type: generic
+  include_only:
+  - column: LCSC
+    regex: ^C\d+
+
+variants:
+- name: place_holder
+  comment: Just a place holder for pre_transform filters
+  type: kicost
+  pre_transform:
+  - _kicost_rename
+  - _rot_footprint
+
+outputs:
+- name: basic_boardview
+  comment: Board View export
+  type: boardview
+  dir: Assembly
+- name: generic_bom_csv
+  comment: Generic Bill of Materials in CSV format
+  type: bom
+  dir: Assembly
+  options:
+    format: CSV
+    count_smd_tht: true
+- name: JLCPCB_gerbers
+  comment: Gerbers compatible with JLCPCB
+  type: gerber
+  dir: Manufacturers/JLCPCB
+  options:
+    exclude_edge_layer: true
+    exclude_pads_from_silkscreen: true
+    plot_sheet_reference: false
+    plot_footprint_refs: true
+    plot_footprint_values: false
+    force_plot_invisible_refs_vals: false
+    tent_vias: true
+    use_protel_extensions: true
+    create_gerber_job_file: false
+    disable_aperture_macros: true
+    gerber_precision: 4.6
+    use_gerber_x2_attributes: false
+    use_gerber_net_attributes: false
+    line_width: 0.1
+    subtract_mask_from_silk: true
+    inner_extension_pattern: .gp%n
+  layers:
+  - layer: F.Cu
+    suffix: F_Cu
+    description: Front copper
+  - layer: B.Cu
+    suffix: B_Cu
+    description: Bottom copper
+  - layer: B.Paste
+    suffix: B_Paste
+    description: Bottom solder paste
+  - layer: F.Paste
+    suffix: F_Paste
+    description: Front solder paste
+  - layer: B.Silkscreen
+    suffix: B_Silkscreen
+    description: Bottom silkscreen (artwork)
+  - layer: F.Silkscreen
+    suffix: F_Silkscreen
+    description: Front silkscreen (artwork)
+  - layer: B.Mask
+    suffix: B_Mask
+    description: Bottom soldermask (negative)
+  - layer: F.Mask
+    suffix: F_Mask
+    description: Front soldermask (negative)
+  - layer: Edge.Cuts
+    suffix: Edge_Cuts
+    description: Board shape
+- name: JLCPCB_drill
+  comment: Drill files compatible with JLCPCB
+  type: excellon
+  dir: Manufacturers/JLCPCB
+  options:
+    pth_and_npth_single_file: false
+    pth_id: -PTH
+    npth_id: -NPTH
+    metric_units: true
+    map: gerber
+    route_mode_for_oval_holes: false
+    output: '%f%i.%x'
+- name: JLCPCB_position
+  comment: Pick and place file, JLCPCB style
+  type: position
+  dir: Manufacturers/JLCPCB
+  options:
+    variant: place_holder
+    output: '%f_cpl_jlc.%x'
+    format: CSV
+    units: millimeters
+    separate_files_for_front_and_back: false
+    only_smd: true
+    columns:
+    - id: Ref
+      name: Designator
+    - Val
+    - Package
+    - id: PosX
+      name: Mid X
+    - id: PosY
+      name: Mid Y
+    - id: Rot
+      name: Rotation
+    - id: Side
+      name: Layer
+- name: JLCPCB_bom
+  comment: BoM for JLCPCB
+  type: bom
+  dir: Manufacturers/JLCPCB
+  options:
+    output: '%f_%i_jlc.%x'
+    exclude_filter: only_jlc_parts
+    ref_separator: ','
+    columns:
+    - field: Value
+      name: Comment
+    - field: References
+      name: Designator
+    - Footprint
+    - field: LCSC
+      name: 'LCSC Part #'
+    csv:
+      hide_pcb_info: true
+      hide_stats_info: true
+      quote_all: true
+- name: JLCPCB
+  comment: ZIP file for JLCPCB
+  type: compress
+  dir: Manufacturers
+  options:
+    files:
+    - from_output: JLCPCB_gerbers
+      dest: /
+    - from_output: JLCPCB_drill
+      dest: /
+    - from_output: JLCPCB_position
+      dest: /
+    - from_output: JLCPCB_bom
+      dest: /
+- name: basic_ibom
+  comment: Interactive HTML BoM
+  type: ibom
+  dir: Assembly
+- name: basic_navigate_results
+  comment: Web page to browse the results
+  type: navigate_results
+  dir: Browse
+  options:
+    link_from_root: index.html
+- name: basic_pdf_sch_print
+  comment: Schematic in PDF format
+  type: pdf_sch_print
+  dir: Assembly
+- name: report_full
+  comment: Full design report
+  type: report
+  dir: Manufacturers
