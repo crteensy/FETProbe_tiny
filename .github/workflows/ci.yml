@@ -1,0 +1,31 @@
+name: "production build"
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+  pull_request:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  smart-controller:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: INTI-CMNB/KiBot@v2_k6
+      with:
+        config: kibot.yaml
+        dir: output
+        schema: FETProbe_tiny.kicad_sch
+        board: FETProbe_tiny.kicad_pcb
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: manufacturing
+        path: output/Manufacturers
+    - uses: actions/upload-artifact@v3
+      with:
+        name: assembly and debugging
+        path: |
+          output/Browse
+          output/Assembly
